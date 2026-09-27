@@ -1,5 +1,8 @@
 server:
   port: 8000
+  # The gateway is the client-IP trust boundary: its own view of the caller comes from the TCP
+  # socket, never from forwarding headers the caller controls.
+  forward-headers-strategy: none
 
 spring:
   application:
@@ -8,6 +11,12 @@ spring:
     gateway:
       server:
         webflux:
+          # Without this property Spring Cloud Gateway swaps the X-Forwarded-* filter for one that
+          # strips every X-Forwarded-* header, so the monolith would see the gateway's IP for every
+          # user (one IP ban = everyone banned, one per-IP login limit shared by all). '.*' is safe
+          # ONLY because EdgeHeaders first deletes every client-supplied forwarding header:
+          # the X-Forwarded-For the monolith receives is exactly the socket peer the gateway saw.
+          trusted-proxies: ".*"
           httpclient:
             connect-timeout: 2000
             # No response-timeout on purpose: SSE verdict streams stay open until the monolith ends them.
