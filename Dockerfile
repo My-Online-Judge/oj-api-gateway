@@ -1,5 +1,9 @@
 # Build stage
 FROM maven:3.9-eclipse-temurin-17-alpine AS builder
+# oj-common is a sibling repo that is not published yet: compile it into this build's local Maven
+# repository first. Compose passes it as the named build context "oj-common" (additional_contexts).
+COPY --from=oj-common . /oj-common
+RUN mvn -B -q -f /oj-common/pom.xml install -DskipTests
 WORKDIR /app
 COPY pom.xml .
 RUN mvn -B dependency:go-offline

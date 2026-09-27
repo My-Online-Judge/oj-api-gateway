@@ -15,6 +15,8 @@ and the gateway forwards to the services behind it. See the design in
 | CORS for the portal origins; upstream `Access-Control-*` headers are dropped | `application.yml` (`globalcors`), `EdgeHeaders` |
 | Gateway errors in judge-api's `ApiResponse` shape (503 when an upstream is down) | `JsonErrorWebExceptionHandler` |
 | Actuator on port 8081 only (never published) | `application.yml` (`management.server.port`) |
+| IP/device ban check (Redis mirror written by judge-api); 403 + `oj.request.banned`; fails open | `AccessBanFilter`, `RedisLookups` |
+| Revoked access token (logout blocklist, per-user `revoked-before` cutoff) is stripped, not rejected; fails open | `RevokedTokenFilter`, `RedisLookups` |
 
 Edge rules are global filters on purpose: Spring Cloud Gateway applies `default-filters` only to
 property-defined routes, not to the Java DSL routes in `GatewayRoutes`.
@@ -31,7 +33,12 @@ property-defined routes, not to the Java DSL routes in `GatewayRoutes`.
 | `MONOLITH_URI` | `http://judge-api:8000` | upstream for `/api/v1/**` |
 | `SPRING_PROFILES_ACTIVE` | — | `dev` also routes Swagger UI / `/v3/api-docs` to judge-api |
 | `JAVA_TOOL_OPTIONS` | — | `-javaagent:/otel/opentelemetry-javaagent.jar` enables tracing (agent is in the image) |
+| `REDIS_HOST` | `localhost` | Redis holding the ban mirror, logout blocklist and revocation cutoffs |
+| `REDIS_PORT` | `6379` | |
 
 ## Test
 
     ./mvnw verify
+
+`oj-common` must be installed first (`./mvnw install` in the sibling `oj-common` repo); Docker builds
+compile it from the named build context: `docker build --build-context oj-common=../oj-common .`
