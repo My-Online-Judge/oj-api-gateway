@@ -11,6 +11,11 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      # Redis answers the ban/revocation lookups in well under a millisecond. Without these, a Redis
+      # that stops answering holds every request for Lettuce's 60 s default before it fails open.
+      # (The command timeout also bounds the connection handshake.)
+      timeout: 250ms
+      connect-timeout: 250ms
   cloud:
     gateway:
       server:
