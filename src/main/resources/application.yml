@@ -34,3 +34,13 @@ oj:
   gateway:
     monolith-uri: ${MONOLITH_URI:http://judge-api:8000}
     expose-api-docs: false
+
+management:
+  server:
+    # Actuator lives on its own port, which compose does not publish, so /actuator is never
+    # reachable through the public :8000.
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
