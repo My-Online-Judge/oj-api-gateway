@@ -20,6 +20,15 @@ spring:
           httpclient:
             connect-timeout: 2000
             # No response-timeout on purpose: SSE verdict streams stay open until the monolith ends them.
+          globalcors:
+            cors-configurations:
+              "[/**]":
+                allowed-origins:
+                  - "http://localhost:5173"
+                  - "http://localhost"
+                allowed-methods: [GET, POST, PUT, DELETE, OPTIONS, PATCH]
+                allowed-headers: "*"
+                allow-credentials: true
 
 oj:
   gateway:

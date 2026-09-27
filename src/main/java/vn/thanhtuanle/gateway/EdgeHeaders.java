@@ -2,14 +2,17 @@ package vn.thanhtuanle.gateway;
 
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.cloud.gateway.filter.headers.HttpHeadersFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Locale;
 
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.PRESERVE_HOST_HEADER_ATTRIBUTE;
 
@@ -35,6 +38,32 @@ class EdgeHeaders {
     @Bean
     GlobalFilter clientForwardingHeadersFilter() {
         return new ClientForwardingHeadersFilter();
+    }
+
+    /**
+     * The gateway owns CORS. Access-Control-* headers from an upstream (an older judge-api image
+     * during rollout) would be added next to the gateway's own, and browsers reject a response
+     * that carries Access-Control-Allow-Origin twice.
+     */
+    @Bean
+    HttpHeadersFilter upstreamCorsHeadersFilter() {
+        return new HttpHeadersFilter() {
+            @Override
+            public HttpHeaders filter(HttpHeaders input, ServerWebExchange exchange) {
+                HttpHeaders filtered = new HttpHeaders();
+                input.forEach((name, values) -> {
+                    if (!name.toLowerCase(Locale.ROOT).startsWith("access-control-")) {
+                        filtered.addAll(name, values);
+                    }
+                });
+                return filtered;
+            }
+
+            @Override
+            public boolean supports(Type type) {
+                return type == Type.RESPONSE;
+            }
+        };
     }
 
     private static final class ClientForwardingHeadersFilter implements GlobalFilter, Ordered {
