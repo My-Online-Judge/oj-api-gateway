@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+oj:
+  gateway:
+    # Keep Swagger UI reachable at :8000 in dev, as it was before the gateway existed.
+    expose-api-docs: true

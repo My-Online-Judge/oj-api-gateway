@@ -1,0 +1,35 @@
+package vn.thanhtuanle.gateway;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.reactive.server.WebTestClient;
+
+/**
+ * Boots the real gateway on a random port in front of a {@link StubUpstream}. The client connects
+ * to 127.0.0.1 (not "localhost", which may resolve to ::1) so the socket peer is predictable.
+ */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "management.server.port=0")
+abstract class GatewayTestSupport {
+
+    static final StubUpstream UPSTREAM = StubUpstream.start();
+
+    @DynamicPropertySource
+    static void routeToStub(DynamicPropertyRegistry registry) {
+        registry.add("oj.gateway.monolith-uri", UPSTREAM::baseUri);
+    }
+
+    @LocalServerPort
+    int port;
+
+    WebTestClient client;
+
+    @BeforeEach
+    void setUp() {
+        UPSTREAM.reset();
+        client = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + port).build();
+    }
+}
