@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.PrematureCloseException;
 
 import java.net.ConnectException;
 import java.net.UnknownHostException;
@@ -64,8 +65,10 @@ class JsonErrorWebExceptionHandler implements ErrorWebExceptionHandler {
         }
         for (Throwable t = ex; t != null; t = t.getCause()) {
             // Connection refused and connect timeout (ConnectTimeoutException extends ConnectException),
-            // plus DNS failure: "Failed to resolve 'judge-api'" when the container is gone.
-            if (t instanceof ConnectException || t instanceof UnknownHostException) {
+            // DNS failure ("Failed to resolve 'judge-api'" when the container is gone), and the upstream
+            // closing the connection before it answered (restarting, or a stale pooled keep-alive).
+            if (t instanceof ConnectException || t instanceof UnknownHostException
+                    || t instanceof PrematureCloseException) {
                 return HttpStatus.SERVICE_UNAVAILABLE;
             }
         }
