@@ -1,0 +1,22 @@
+# Build stage
+FROM maven:3.9-eclipse-temurin-17-alpine AS builder
+WORKDIR /app
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+COPY src ./src
+RUN mvn -B clean package -DskipTests
+
+# Run stage
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+# OpenTelemetry Java agent, pinned and checksum-verified. The deployment ENABLES it with
+# JAVA_TOOL_OPTIONS=-javaagent:/otel/opentelemetry-javaagent.jar; without that the image runs untraced.
+ARG OTEL_AGENT_VERSION=2.31.1
+ARG OTEL_AGENT_SHA256=bbf83c151b6400709e2f225bdd07a04f839d9d13b8b93464241333fd25d3e3ba
+RUN mkdir /otel \
+    && wget -q -O /otel/opentelemetry-javaagent.jar \
+       "https://repo1.maven.org/maven2/io/opentelemetry/javaagent/opentelemetry-javaagent/${OTEL_AGENT_VERSION}/opentelemetry-javaagent-${OTEL_AGENT_VERSION}.jar" \
+    && echo "${OTEL_AGENT_SHA256}  /otel/opentelemetry-javaagent.jar" | sha256sum -c -
+COPY --from=builder /app/target/api-gateway.jar app.jar
+EXPOSE 8000 8081
+ENTRYPOINT ["java", "-jar", "app.jar"]
