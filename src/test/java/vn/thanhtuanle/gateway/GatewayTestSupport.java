@@ -32,12 +32,16 @@ abstract class GatewayTestSupport {
     @Autowired
     InMemoryLookups.Bans bans;
 
+    @Autowired
+    InMemoryLookups.Revocations revocations;
+
     WebTestClient client;
 
     @BeforeEach
     void setUp() {
         UPSTREAM.reset();
         bans.reset();
+        revocations.reset();
         client = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + port).build();
     }
 }
