@@ -1,12 +1,10 @@
 package vn.thanhtuanle.gateway;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,8 +14,6 @@ import reactor.netty.http.client.PrematureCloseException;
 
 import java.net.ConnectException;
 import java.net.UnknownHostException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * Renders every error the gateway itself produces in judge-api's {@code ApiResponse} error shape
@@ -29,15 +25,11 @@ import java.time.format.DateTimeFormatter;
 class JsonErrorWebExceptionHandler implements ErrorWebExceptionHandler {
 
     static final String UNAVAILABLE_MESSAGE = "Service temporarily unavailable";
-    private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final ObjectMapper objectMapper;
 
     JsonErrorWebExceptionHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-    }
-
-    record ErrorBody(int status, String message, String timestamp) {
     }
 
     @Override
@@ -47,16 +39,7 @@ class JsonErrorWebExceptionHandler implements ErrorWebExceptionHandler {
             return Mono.error(ex); // failed mid-stream (e.g. an SSE body): nothing sane left to write
         }
         HttpStatusCode status = statusFor(ex);
-        byte[] body;
-        try {
-            body = objectMapper.writeValueAsBytes(
-                    new ErrorBody(status.value(), messageFor(status), LocalDateTime.now().format(TIMESTAMP)));
-        } catch (JsonProcessingException e) {
-            return Mono.error(e);
-        }
-        response.setStatusCode(status);
-        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        return response.writeWith(Mono.just(response.bufferFactory().wrap(body)));
+        return ApiErrors.write(response, status, messageFor(status), objectMapper);
     }
 
     static HttpStatusCode statusFor(Throwable ex) {
