@@ -37,7 +37,7 @@ class RevokedTokenFilterTest extends GatewayTestSupport {
                 .cookie("theme", "dark").cookie("accessToken", token("jti-revoked")).cookie("refreshToken", "r")
                 .exchange().expectStatus().isOk();
 
-        String cookies = UPSTREAM.last().headers().getFirst(HttpHeaders.COOKIE);
+        String cookies = IDENTITY.last().headers().getFirst(HttpHeaders.COOKIE);
         assertThat(cookies).contains("theme=dark").contains("refreshToken=r").doesNotContain("accessToken");
     }
 

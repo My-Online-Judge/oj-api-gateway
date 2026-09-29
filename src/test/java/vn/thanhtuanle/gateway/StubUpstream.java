@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** A real HTTP server standing in for judge-api; it records every request it receives. */
+/** A real HTTP server standing in for an upstream service; it records every request it receives. */
 final class StubUpstream {
 
     record Received(String method, String uri, HttpHeaders headers) {
@@ -61,7 +61,7 @@ final class StubUpstream {
                     .sendString(Flux.concat(
                             Flux.just("data: first\n\n"),
                             Mono.delay(Duration.ofSeconds(3)).thenMany(Flux.just("data: second\n\n"))));
-            // Shape of judge-api's Google OAuth callback: redirect back to the SPA + auth cookie.
+            // Shape of the Google OAuth callback: redirect back to the SPA + auth cookie.
             case "/api/v1/auth/outbound/google/callback" -> res
                     .status(302)
                     .header("Location", "http://localhost/")
