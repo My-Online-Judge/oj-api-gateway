@@ -47,6 +47,7 @@ oj:
   gateway:
     monolith-uri: ${MONOLITH_URI:http://judge-api:8000}
     identity-uri: ${IDENTITY_URI:http://identity-service:8000}
+    problem-uri: ${PROBLEM_URI:http://problem-service:8000}
     expose-api-docs: false
 
 management:

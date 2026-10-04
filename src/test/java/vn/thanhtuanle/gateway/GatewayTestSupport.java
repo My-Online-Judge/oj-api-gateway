@@ -22,11 +22,13 @@ abstract class GatewayTestSupport {
 
     static final StubUpstream UPSTREAM = StubUpstream.start();
     static final StubUpstream IDENTITY = StubUpstream.start();
+    static final StubUpstream PROBLEM = StubUpstream.start();
 
     @DynamicPropertySource
     static void routeToStub(DynamicPropertyRegistry registry) {
         registry.add("oj.gateway.monolith-uri", UPSTREAM::baseUri);
         registry.add("oj.gateway.identity-uri", IDENTITY::baseUri);
+        registry.add("oj.gateway.problem-uri", PROBLEM::baseUri);
     }
 
     @LocalServerPort
@@ -44,6 +46,7 @@ abstract class GatewayTestSupport {
     void setUp() {
         UPSTREAM.reset();
         IDENTITY.reset();
+        PROBLEM.reset();
         bans.reset();
         revocations.reset();
         client = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + port).build();

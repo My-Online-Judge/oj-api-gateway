@@ -28,6 +28,7 @@ class RoutingTest extends GatewayTestSupport {
                 .expectBody().jsonPath("$.status").isEqualTo(404);
         assertThat(UPSTREAM.received()).isEmpty();
         assertThat(IDENTITY.received()).isEmpty();
+        assertThat(PROBLEM.received()).isEmpty();
     }
 
     @ParameterizedTest
@@ -41,12 +42,24 @@ class RoutingTest extends GatewayTestSupport {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/api/v1/languages", "/api/v1/problems", "/api/v1/submissions/user/42", "/api/v1/usersx"})
+    @ValueSource(strings = {"/api/v1/problems", "/api/v1/problems?page=0&size=10&status=ACTIVE",
+            "/api/v1/problems/a-plus-b", "/api/v1/problems/a-plus-b/test-cases"})
+    void problemPathsGoToProblemService(String path) {
+        client.get().uri(path).exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("upstream:" + path);
+        assertThat(UPSTREAM.received()).as("the monolith sees none of them").isEmpty();
+        assertThat(PROBLEM.received()).hasSize(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/languages", "/api/v1/submissions/user/42", "/api/v1/usersx", "/api/v1/problemsx"})
     void everythingElseStaysWithTheMonolith(String path) {
         client.get().uri(path).exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("upstream:" + path);
         assertThat(IDENTITY.received()).as("identity-service sees none of them").isEmpty();
+        assertThat(PROBLEM.received()).as("problem-service sees none of them").isEmpty();
     }
 
     @Test
@@ -84,5 +97,6 @@ class RoutingTest extends GatewayTestSupport {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("bytes:" + eightMegabytes.length);
+        assertThat(PROBLEM.received()).as("problem imports go to problem-service").hasSize(1);
     }
 }

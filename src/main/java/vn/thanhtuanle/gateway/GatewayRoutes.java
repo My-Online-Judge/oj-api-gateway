@@ -16,11 +16,15 @@ class GatewayRoutes {
     static final String[] IDENTITY_PATHS = {
             "/api/v1/auth/**", "/api/v1/users/**", "/api/v1/roles/**", "/api/v1/permissions/**", "/api/v1/security/**"};
 
+    /** Owned by problem-service since sub-project 2b. */
+    static final String[] PROBLEM_PATHS = {"/api/v1/problems", "/api/v1/problems/**"};
+
     @Bean
     RouteLocator ojRoutes(RouteLocatorBuilder builder, GatewayRouteProperties props) {
         RouteLocatorBuilder.Builder routes = builder.routes()
                 // Explicit orders: the specific service routes must win over the catch-all below.
                 .route("identity-api", r -> r.order(0).path(IDENTITY_PATHS).uri(props.identityUri()))
+                .route("problem-api", r -> r.order(0).path(PROBLEM_PATHS).uri(props.problemUri()))
                 .route("monolith-api", r -> r.order(1).path("/api/v1/**").uri(props.monolithUri()));
         if (props.exposeApiDocs()) {
             routes.route("monolith-api-docs", r -> r

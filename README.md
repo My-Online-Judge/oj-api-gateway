@@ -9,7 +9,7 @@ and the gateway forwards to the services behind it. See the design in
 
 | Concern | Where |
 |---|---|
-| Routing table (Strangler Fig: identity paths → identity-service, the rest → judge-api) | `GatewayRoutes` |
+| Routing table (Strangler Fig: identity paths → identity-service, problem paths → problem-service, the rest → judge-api) | `GatewayRoutes` |
 | Client-IP trust boundary: client `X-Forwarded-*`/`X-Real-IP`/`Forwarded` are deleted, then `X-Forwarded-For` = socket peer | `EdgeHeaders`, `trusted-proxies` in `application.yml` |
 | Browser `Host` is forwarded unchanged | `EdgeHeaders` |
 | CORS for the portal origins; upstream `Access-Control-*` headers are dropped | `application.yml` (`globalcors`), `EdgeHeaders` |
@@ -32,6 +32,7 @@ property-defined routes, not to the Java DSL routes in `GatewayRoutes`.
 |---|---|---|
 | `MONOLITH_URI` | `http://judge-api:8000` | upstream for `/api/v1/**` not claimed by another service |
 | `IDENTITY_URI` | `http://identity-service:8000` | upstream for `/api/v1/{auth,users,roles,permissions,security}/**` |
+| `PROBLEM_URI` | `http://problem-service:8000` | upstream for `/api/v1/problems` and `/api/v1/problems/**` |
 | `SPRING_PROFILES_ACTIVE` | — | `dev` also routes Swagger UI / `/v3/api-docs` to judge-api |
 | `JAVA_TOOL_OPTIONS` | — | `-javaagent:/otel/opentelemetry-javaagent.jar` enables tracing (agent is in the image) |
 | `REDIS_HOST` | `localhost` | Redis holding the ban mirror, logout blocklist and revocation cutoffs |
