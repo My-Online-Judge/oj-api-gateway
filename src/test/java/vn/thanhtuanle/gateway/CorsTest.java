@@ -34,7 +34,7 @@ class CorsTest extends GatewayTestSupport {
 
     @Test
     void actualRequestCarriesExactlyOneAllowOriginEvenWhenTheUpstreamAddsOne() {
-        client.get().uri("/api/v1/cors-from-upstream")
+        client.get().uri("/api/v1/submissions/cors-from-upstream")
                 .header("Origin", "http://localhost")
                 .exchange()
                 .expectStatus().isOk()

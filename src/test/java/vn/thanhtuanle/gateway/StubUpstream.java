@@ -68,7 +68,7 @@ final class StubUpstream {
                     .header("Set-Cookie", "accessToken=abc; Path=/; HttpOnly")
                     .send();
             // An upstream that still adds its own CORS headers (an old judge-api image).
-            case "/api/v1/cors-from-upstream" -> res
+            case "/api/v1/submissions/cors-from-upstream" -> res
                     .header("Access-Control-Allow-Origin", "http://localhost")
                     .header("Access-Control-Allow-Credentials", "true")
                     .sendString(Mono.just("ok"));

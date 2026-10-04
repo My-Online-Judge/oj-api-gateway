@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RoutingTest extends GatewayTestSupport {
 
     @Test
-    void apiPathIsForwardedToTheMonolithUnchanged() {
+    void apiPathIsForwardedToSubmissionServiceUnchanged() {
         client.get().uri("/api/v1/languages?page=0").exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("upstream:/api/v1/languages?page=0");
@@ -38,7 +38,7 @@ class RoutingTest extends GatewayTestSupport {
         client.get().uri(path).exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("upstream:" + path);
-        assertThat(UPSTREAM.received()).as("the monolith sees none of them").isEmpty();
+        assertThat(UPSTREAM.received()).as("submission-service sees none of them").isEmpty();
     }
 
     @ParameterizedTest
@@ -48,18 +48,32 @@ class RoutingTest extends GatewayTestSupport {
         client.get().uri(path).exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("upstream:" + path);
-        assertThat(UPSTREAM.received()).as("the monolith sees none of them").isEmpty();
+        assertThat(UPSTREAM.received()).as("submission-service sees none of them").isEmpty();
         assertThat(PROBLEM.received()).hasSize(1);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/api/v1/languages", "/api/v1/submissions/user/42", "/api/v1/usersx", "/api/v1/problemsx"})
-    void everythingElseStaysWithTheMonolith(String path) {
+    @ValueSource(strings = {"/api/v1/submissions", "/api/v1/submissions/user/42", "/api/v1/submissions/s1",
+            "/api/v1/languages", "/api/v1/judge-servers"})
+    void submissionPathsGoToSubmissionService(String path) {
         client.get().uri(path).exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("upstream:" + path);
+        assertThat(UPSTREAM.received()).hasSize(1);
         assertThat(IDENTITY.received()).as("identity-service sees none of them").isEmpty();
         assertThat(PROBLEM.received()).as("problem-service sees none of them").isEmpty();
+    }
+
+    // Since sub-project 3a no service owns "the rest": an unclaimed API path is the gateway's own 404.
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/foo", "/api/v1/usersx", "/api/v1/problemsx", "/api/v1/submissionsx"})
+    void unclaimedApiPathsAreA404FromTheGateway(String path) {
+        client.get().uri(path).exchange()
+                .expectStatus().isNotFound()
+                .expectBody().jsonPath("$.status").isEqualTo(404);
+        assertThat(UPSTREAM.received()).isEmpty();
+        assertThat(IDENTITY.received()).isEmpty();
+        assertThat(PROBLEM.received()).isEmpty();
     }
 
     @Test

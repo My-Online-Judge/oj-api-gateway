@@ -21,14 +21,14 @@ spring:
       server:
         webflux:
           # Without this property Spring Cloud Gateway swaps the X-Forwarded-* filter for one that
-          # strips every X-Forwarded-* header, so the monolith would see the gateway's IP for every
+          # strips every X-Forwarded-* header, so the services would see the gateway's IP for every
           # user (one IP ban = everyone banned, one per-IP login limit shared by all). '.*' is safe
           # ONLY because EdgeHeaders first deletes every client-supplied forwarding header:
-          # the X-Forwarded-For the monolith receives is exactly the socket peer the gateway saw.
+          # the X-Forwarded-For a service receives is exactly the socket peer the gateway saw.
           trusted-proxies: ".*"
           httpclient:
             connect-timeout: 2000
-            # No response-timeout on purpose: SSE verdict streams stay open until the monolith ends them.
+            # No response-timeout on purpose: SSE verdict streams stay open until submission-service ends them.
             pool:
               # Retire idle upstream connections before Tomcat's keep-alive timeout (60s) closes them;
               # reusing one Tomcat is closing at that instant fails with PrematureCloseException.
@@ -45,7 +45,7 @@ spring:
 
 oj:
   gateway:
-    monolith-uri: ${MONOLITH_URI:http://judge-api:8000}
+    submission-uri: ${SUBMISSION_URI:http://submission-service:8000}
     identity-uri: ${IDENTITY_URI:http://identity-service:8000}
     problem-uri: ${PROBLEM_URI:http://problem-service:8000}
     expose-api-docs: false

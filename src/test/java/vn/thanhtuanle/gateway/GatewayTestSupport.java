@@ -10,8 +10,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
- * Boots the real gateway on a random port in front of two {@link StubUpstream}s — the monolith and
- * identity-service. The client connects
+ * Boots the real gateway on a random port in front of three {@link StubUpstream}s — submission-service
+ * ({@code UPSTREAM}), identity-service and problem-service. The client connects
  * to 127.0.0.1 (not "localhost", which may resolve to ::1) so the socket peer is predictable.
  * Bans and revocations come from {@link InMemoryLookups}, empty unless a test adds some.
  */
@@ -26,7 +26,7 @@ abstract class GatewayTestSupport {
 
     @DynamicPropertySource
     static void routeToStub(DynamicPropertyRegistry registry) {
-        registry.add("oj.gateway.monolith-uri", UPSTREAM::baseUri);
+        registry.add("oj.gateway.submission-uri", UPSTREAM::baseUri);
         registry.add("oj.gateway.identity-uri", IDENTITY::baseUri);
         registry.add("oj.gateway.problem-uri", PROBLEM::baseUri);
     }

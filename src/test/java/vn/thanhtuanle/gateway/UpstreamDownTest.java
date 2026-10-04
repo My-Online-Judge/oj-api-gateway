@@ -21,7 +21,7 @@ class UpstreamDownTest {
 
     @DynamicPropertySource
     static void routeToAClosedPort(DynamicPropertyRegistry registry) {
-        registry.add("oj.gateway.monolith-uri", () -> "http://127.0.0.1:" + freePort());
+        registry.add("oj.gateway.submission-uri", () -> "http://127.0.0.1:" + freePort());
     }
 
     static int freePort() {

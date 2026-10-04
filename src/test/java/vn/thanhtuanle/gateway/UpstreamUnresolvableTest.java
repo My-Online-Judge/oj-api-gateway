@@ -10,7 +10,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
  * (".invalid" is reserved and never resolves, RFC 2606).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"management.server.port=0", "oj.gateway.monolith-uri=http://judge-api.invalid:8000"})
+        properties = {"management.server.port=0", "oj.gateway.submission-uri=http://submission-service.invalid:8000"})
 class UpstreamUnresolvableTest {
 
     @LocalServerPort

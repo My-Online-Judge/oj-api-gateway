@@ -46,7 +46,7 @@ class UpstreamClosesConnectionTest {
 
     @DynamicPropertySource
     static void routeToTheClosingUpstream(DynamicPropertyRegistry registry) {
-        registry.add("oj.gateway.monolith-uri", () -> "http://127.0.0.1:" + CLOSING_UPSTREAM.getLocalPort());
+        registry.add("oj.gateway.submission-uri", () -> "http://127.0.0.1:" + CLOSING_UPSTREAM.getLocalPort());
     }
 
     @LocalServerPort
