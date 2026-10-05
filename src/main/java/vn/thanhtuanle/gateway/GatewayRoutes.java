@@ -16,7 +16,7 @@ class GatewayRoutes {
     static final String[] IDENTITY_PATHS = {
             "/api/v1/auth/**", "/api/v1/users/**", "/api/v1/roles/**", "/api/v1/permissions/**", "/api/v1/security/**"};
 
-    /** Owned by submission-service (still built from the judge-api repo until sub-project 3b). */
+    /** Owned by submission-service (oj-submission-service). */
     static final String[] SUBMISSION_PATHS = {"/api/v1/submissions/**", "/api/v1/languages/**", "/api/v1/judge-servers/**"};
 
     /** Owned by problem-service since sub-project 2b. */

@@ -41,7 +41,7 @@ class EdgeHeaders {
     }
 
     /**
-     * The gateway owns CORS. Access-Control-* headers from an upstream (an older judge-api image
+     * The gateway owns CORS. Access-Control-* headers from an upstream (an older service image
      * during rollout) would be added next to the gateway's own, and browsers reject a response
      * that carries Access-Control-Allow-Origin twice.
      */

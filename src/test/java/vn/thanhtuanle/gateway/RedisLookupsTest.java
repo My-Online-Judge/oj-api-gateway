@@ -15,7 +15,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** The Redis adapters against a real Redis, with the key formats judge-api writes. */
+/** The Redis adapters against a real Redis, with the key formats identity-service writes. */
 @Testcontainers(disabledWithoutDocker = true)
 class RedisLookupsTest {
 

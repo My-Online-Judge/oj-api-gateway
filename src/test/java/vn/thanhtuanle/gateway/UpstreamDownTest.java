@@ -14,7 +14,7 @@ import java.net.ServerSocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Nothing listens on the monolith's port: the "judge-api stopped" case. */
+/** Nothing listens on the upstream's port: the "service stopped" case. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "management.server.port=0")
 class UpstreamDownTest {
@@ -36,7 +36,7 @@ class UpstreamDownTest {
     int port;
 
     @Test
-    void monolithDownReturns503InTheApiResponseShape() {
+    void upstreamDownReturns503InTheApiResponseShape() {
         WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + port).build()
                 .get().uri("/api/v1/languages").exchange()
                 .expectStatus().isEqualTo(503)

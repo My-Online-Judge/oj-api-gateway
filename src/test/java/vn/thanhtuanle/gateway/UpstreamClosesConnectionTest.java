@@ -14,8 +14,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 /**
- * The monolith accepts the connection, reads the request, then closes the socket without
- * answering: judge-api restarting mid-request, or a pooled keep-alive connection it closed just as
+ * The upstream accepts the connection, reads the request, then closes the socket without
+ * answering: a service restarting mid-request, or a pooled keep-alive connection it closed just as
  * the gateway reused it. That is a downstream connection failure (spec §8) → 503, not a 500.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,

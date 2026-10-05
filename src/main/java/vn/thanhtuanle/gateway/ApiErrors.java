@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/** Writes judge-api's {@code ApiResponse} error shape: {@code {status, message, timestamp}}. */
+/** Writes the services' {@code ApiResponse} error shape: {@code {status, message, timestamp}}. */
 final class ApiErrors {
 
     private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");

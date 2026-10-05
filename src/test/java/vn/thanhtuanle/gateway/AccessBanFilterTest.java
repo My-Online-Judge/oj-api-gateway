@@ -16,7 +16,7 @@ class AccessBanFilterTest extends GatewayTestSupport {
     MeterRegistry registry;
 
     @Test
-    void aBannedDeviceGets403InTheApiResponseShapeAndNeverReachesTheMonolith() {
+    void aBannedDeviceGets403InTheApiResponseShapeAndNeverReachesTheUpstream() {
         bans.banned.add("device:stolen-laptop");
 
         client.get().uri("/api/v1/problems").header("X-Device-Id", "stolen-laptop").exchange()

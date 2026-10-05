@@ -13,7 +13,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Reactor Netty keeps idle pooled upstream connections forever by default, while judge-api's Tomcat
+ * Reactor Netty keeps idle pooled upstream connections forever by default, while the services' Tomcat
  * closes idle keep-alive connections after its keep-alive timeout (60s unless configured). Reusing a
  * connection Tomcat is closing at that instant fails with PrematureCloseException — a sporadic,
  * unreproducible error for users. The gateway must retire idle connections first.

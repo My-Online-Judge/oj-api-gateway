@@ -16,7 +16,7 @@ import java.net.ConnectException;
 import java.net.UnknownHostException;
 
 /**
- * Renders every error the gateway itself produces in judge-api's {@code ApiResponse} error shape
+ * Renders every error the gateway itself produces in the services' {@code ApiResponse} error shape
  * ({@code {status, message, timestamp}}), so the portal handles a gateway failure exactly like a
  * failure inside a service.
  */
@@ -48,7 +48,7 @@ class JsonErrorWebExceptionHandler implements ErrorWebExceptionHandler {
         }
         for (Throwable t = ex; t != null; t = t.getCause()) {
             // Connection refused and connect timeout (ConnectTimeoutException extends ConnectException),
-            // DNS failure ("Failed to resolve 'judge-api'" when the container is gone), and the upstream
+            // DNS failure ("Failed to resolve 'submission-service'" when the container is gone), and the upstream
             // closing the connection before it answered (restarting, or a stale pooled keep-alive).
             if (t instanceof ConnectException || t instanceof UnknownHostException
                     || t instanceof PrematureCloseException) {

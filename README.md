@@ -13,9 +13,9 @@ and the gateway forwards to the services behind it. See the design in
 | Client-IP trust boundary: client `X-Forwarded-*`/`X-Real-IP`/`Forwarded` are deleted, then `X-Forwarded-For` = socket peer | `EdgeHeaders`, `trusted-proxies` in `application.yml` |
 | Browser `Host` is forwarded unchanged | `EdgeHeaders` |
 | CORS for the portal origins; upstream `Access-Control-*` headers are dropped | `application.yml` (`globalcors`), `EdgeHeaders` |
-| Gateway errors in judge-api's `ApiResponse` shape (503 when an upstream is down) | `JsonErrorWebExceptionHandler` |
+| Gateway errors in the services' `ApiResponse` shape (oj-common) (503 when an upstream is down) | `JsonErrorWebExceptionHandler` |
 | Actuator on port 8081 only (never published) | `application.yml` (`management.server.port`) |
-| IP/device ban check (Redis mirror written by judge-api); 403 + `oj.request.banned`; fails open | `AccessBanFilter`, `RedisLookups` |
+| IP/device ban check (Redis mirror written by identity-service); 403 + `oj.request.banned`; fails open | `AccessBanFilter`, `RedisLookups` |
 | Revoked access token (logout blocklist, per-user `revoked-before` cutoff) is stripped, not rejected; fails open | `RevokedTokenFilter`, `RedisLookups` |
 
 Edge rules are global filters on purpose: Spring Cloud Gateway applies `default-filters` only to

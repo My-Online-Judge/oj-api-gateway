@@ -6,7 +6,7 @@ import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import reactor.core.publisher.Mono;
 import vn.thanhtuanle.oj.common.redis.RedisKeys;
 
-/** Ban and revocation lookups against the Redis keys judge-api writes (formats from oj-common). */
+/** Ban and revocation lookups against the Redis keys identity-service writes (formats from oj-common). */
 @Configuration(proxyBeanMethods = false)
 class RedisLookups {
 

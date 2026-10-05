@@ -24,7 +24,7 @@ class ApiDocsRouteTest extends GatewayTestSupport {
 
     @Test
     void edgeRulesApplyToThisRouteToo() {
-        // Guards the reason EdgeHeaders is global: every route, not only monolith-api, must strip
+        // Guards the reason EdgeHeaders is global: every route, not only the submission routes, must strip
         // client forwarding headers and keep the browser's Host.
         client.get().uri("/v3/api-docs").header("X-Forwarded-For", "1.2.3.4").exchange()
                 .expectStatus().isOk();

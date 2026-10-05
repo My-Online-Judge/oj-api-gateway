@@ -26,7 +26,7 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
-		<!-- Ban and revocation checks read the Redis keys judge-api (later identity-service) writes. -->
+		<!-- Ban and revocation checks read the Redis keys identity-service writes. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis-reactive</artifactId>
