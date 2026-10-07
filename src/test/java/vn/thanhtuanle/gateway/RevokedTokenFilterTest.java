@@ -1,6 +1,8 @@
 package vn.thanhtuanle.gateway;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 
 import java.nio.charset.StandardCharsets;
@@ -68,5 +70,19 @@ class RevokedTokenFilterTest extends GatewayTestSupport {
                 .exchange().expectStatus().isOk();
 
         assertThat(UPSTREAM.last().headers().containsKey(HttpHeaders.AUTHORIZATION)).isTrue();
+    }
+
+    @Autowired
+    MeterRegistry registry;
+
+    @Test
+    void aFailedRevocationLookupIsCountedAsARedisFallback() {
+        revocations.unavailable = true;
+        double before = registry.counter("oj.redis.fallback", "lookup", "revocation").count();
+
+        client.get().uri("/api/v1/submissions").header(HttpHeaders.AUTHORIZATION, "Bearer " + token("jti-any"))
+                .exchange().expectStatus().isOk();
+
+        assertThat(registry.counter("oj.redis.fallback", "lookup", "revocation").count()).isEqualTo(before + 1);
     }
 }

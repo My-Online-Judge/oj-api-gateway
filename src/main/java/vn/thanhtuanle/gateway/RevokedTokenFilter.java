@@ -1,5 +1,7 @@
 package vn.thanhtuanle.gateway;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -30,9 +32,14 @@ class RevokedTokenFilter implements GlobalFilter, Ordered {
     private static final Logger log = LoggerFactory.getLogger(RevokedTokenFilter.class);
 
     private final RevocationLookup revocations;
+    private final Counter fallbacks;
 
-    RevokedTokenFilter(RevocationLookup revocations) {
+    RevokedTokenFilter(RevocationLookup revocations, MeterRegistry registry) {
         this.revocations = revocations;
+        this.fallbacks = Counter.builder("oj.redis.fallback")
+                .description("Requests or work that went on without Redis because a Redis call failed (fail-open)")
+                .tag("lookup", "revocation")
+                .register(registry);
     }
 
     @Override
@@ -44,6 +51,7 @@ class RevokedTokenFilter implements GlobalFilter, Ordered {
         }
         return revocations.isRevoked(claims.get())
                 .onErrorResume(e -> {
+                    fallbacks.increment();
                     log.warn("Revocation lookup unavailable, keeping the token: {}", e.getMessage());
                     return Mono.just(false);
                 })

@@ -31,6 +31,7 @@ class AccessBanFilter implements GlobalFilter, Ordered {
     private final BanLookup bans;
     private final ObjectMapper objectMapper;
     private final Counter banned;
+    private final Counter fallbacks;
 
     AccessBanFilter(BanLookup bans, ObjectMapper objectMapper, MeterRegistry registry) {
         this.bans = bans;
@@ -38,6 +39,11 @@ class AccessBanFilter implements GlobalFilter, Ordered {
         // Same meter judge-api registered, so the BannedRequestFlood alert keeps working unchanged.
         this.banned = Counter.builder("oj.request.banned")
                 .description("Requests refused because the client IP or device is banned")
+                .register(registry);
+        // Sub-project 6: the RedisUnavailable rule watches every request let through because Redis did not answer.
+        this.fallbacks = Counter.builder("oj.redis.fallback")
+                .description("Requests or work that went on without Redis because a Redis call failed (fail-open)")
+                .tag("lookup", "ban")
                 .register(registry);
     }
 
@@ -50,6 +56,7 @@ class AccessBanFilter implements GlobalFilter, Ordered {
         return bans.isBanned("ip", ip)
                 .flatMap(ipBanned -> ipBanned ? Mono.just(true) : bans.isBanned("device", device))
                 .onErrorResume(e -> {
+                    fallbacks.increment();
                     log.warn("Ban lookup unavailable, allowing request: {}", e.getMessage());
                     return Mono.just(false);
                 })

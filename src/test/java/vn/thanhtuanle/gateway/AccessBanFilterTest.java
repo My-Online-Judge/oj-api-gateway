@@ -69,4 +69,14 @@ class AccessBanFilterTest extends GatewayTestSupport {
 
         assertThat(registry.counter("oj.request.banned").count()).isEqualTo(before + 1);
     }
+
+    @Test
+    void aFailedBanLookupIsCountedAsARedisFallback() {
+        bans.unavailable = true;
+        double before = registry.counter("oj.redis.fallback", "lookup", "ban").count();
+
+        client.get().uri("/api/v1/problems").exchange().expectStatus().isOk();
+
+        assertThat(registry.counter("oj.redis.fallback", "lookup", "ban").count()).isEqualTo(before + 1);
+    }
 }
