@@ -19,12 +19,16 @@ class GatewayRoutes {
     /** Owned by submission-service (oj-submission-service). */
     static final String[] SUBMISSION_PATHS = {"/api/v1/submissions/**", "/api/v1/languages/**", "/api/v1/judge-servers/**"};
 
+    /** A problem-scoped action owned by submission-service; routed ahead of the problem-service wildcard. */
+    static final String[] SUBMISSION_PROBLEM_PATHS = {"/api/v1/problems/{slug}/rejudge"};
+
     /** Owned by problem-service since sub-project 2b. */
     static final String[] PROBLEM_PATHS = {"/api/v1/problems", "/api/v1/problems/**"};
 
     @Bean
     RouteLocator ojRoutes(RouteLocatorBuilder builder, GatewayRouteProperties props) {
         RouteLocatorBuilder.Builder routes = builder.routes()
+                .route("submission-rejudge", r -> r.order(-1).path(SUBMISSION_PROBLEM_PATHS).uri(props.submissionUri()))
                 .route("identity-api", r -> r.order(0).path(IDENTITY_PATHS).uri(props.identityUri()))
                 .route("problem-api", r -> r.order(0).path(PROBLEM_PATHS).uri(props.problemUri()))
                 .route("submission-api", r -> r.order(0).path(SUBMISSION_PATHS).uri(props.submissionUri()));

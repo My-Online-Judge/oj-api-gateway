@@ -43,13 +43,24 @@ class RoutingTest extends GatewayTestSupport {
 
     @ParameterizedTest
     @ValueSource(strings = {"/api/v1/problems", "/api/v1/problems?page=0&size=10&status=ACTIVE",
-            "/api/v1/problems/a-plus-b", "/api/v1/problems/a-plus-b/test-cases"})
+            "/api/v1/problems/a-plus-b", "/api/v1/problems/a-plus-b/test-cases",
+            "/api/v1/problems/a-plus-b/rejudge-x"})
     void problemPathsGoToProblemService(String path) {
         client.get().uri(path).exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("upstream:" + path);
         assertThat(UPSTREAM.received()).as("submission-service sees none of them").isEmpty();
         assertThat(PROBLEM.received()).hasSize(1);
+    }
+
+    @Test
+    void problemRejudgeGoesToSubmissionService() {
+        String path = "/api/v1/problems/a-plus-b/rejudge?status=-1";
+        client.post().uri(path).exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("upstream:" + path);
+        assertThat(UPSTREAM.received()).hasSize(1);
+        assertThat(PROBLEM.received()).as("problem-service sees none of it").isEmpty();
     }
 
     @ParameterizedTest
