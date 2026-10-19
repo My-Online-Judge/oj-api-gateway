@@ -14,3 +14,24 @@ spring:
     redis:
       ssl:
         bundle: oj
+  # Upstream calls (SUBMISSION_URI, IDENTITY_URI, PROBLEM_URI: https): this certificate is presented (the services
+  # require one and allow-list the CN api-gateway); the service's certificate must chain to the CA and name the host.
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            ssl:
+              ssl-bundle: oj
+# The actuator port (management.server.port, 8081) serves TLS and requires a CA-signed client certificate (Prometheus
+# and the healthcheck present their own). Management SSL needs that separate port: on the main port, Spring Boot
+# refuses to start. The API port 8000 stays plain HTTP until the edge (sub-project 10, task 14).
+management:
+  server:
+    ssl:
+      enabled: true
+      bundle: oj
+      client-auth: need
+  health:
+    ssl:
+      certificate-validity-warning-threshold: 30d

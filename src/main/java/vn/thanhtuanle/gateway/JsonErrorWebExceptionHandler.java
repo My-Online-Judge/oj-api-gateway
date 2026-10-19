@@ -12,6 +12,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.PrematureCloseException;
 
+import javax.net.ssl.SSLException;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
 
@@ -53,6 +54,12 @@ class JsonErrorWebExceptionHandler implements ErrorWebExceptionHandler {
             if (t instanceof ConnectException || t instanceof UnknownHostException
                     || t instanceof PrematureCloseException) {
                 return HttpStatus.SERVICE_UNAVAILABLE;
+            }
+            // TLS between the gateway and the service failed: the service's certificate was refused (not signed by
+            // the CA, or not issued for the host in the route URI) or the service refused the gateway's. A retry does
+            // not help.
+            if (t instanceof SSLException) {
+                return HttpStatus.BAD_GATEWAY;
             }
         }
         return HttpStatus.INTERNAL_SERVER_ERROR;

@@ -8,3 +8,4 @@ must never be used outside tests. Production certificates are issued by `pki.sh 
 - `server.*`: a server leaf (CN=localhost, SAN localhost / 127.0.0.1)
 - `api-gateway.*`: a client leaf signed by the CA
 - `rogue-client.*`: a client leaf signed by a different (discarded) CA, which Redis must refuse
+- `tls-probe.*`: another leaf signed by the CA (an upstream reached at an address its SAN does not list)

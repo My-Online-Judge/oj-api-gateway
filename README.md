@@ -13,8 +13,9 @@ and the gateway forwards to the services behind it. See the design in
 | Client-IP trust boundary: client `X-Forwarded-*`/`X-Real-IP`/`Forwarded` are deleted, then `X-Forwarded-For` = socket peer | `EdgeHeaders`, `trusted-proxies` in `application.yml` |
 | Browser `Host` is forwarded unchanged | `EdgeHeaders` |
 | CORS for the portal origins; upstream `Access-Control-*` headers are dropped | `application.yml` (`globalcors`), `EdgeHeaders` |
-| Gateway errors in the services' `ApiResponse` shape (oj-common) (503 when an upstream is down) | `JsonErrorWebExceptionHandler` |
+| Gateway errors in the services' `ApiResponse` shape (oj-common) (503 when an upstream is down, 502 when TLS to it fails) | `JsonErrorWebExceptionHandler` |
 | Actuator on port 8081 only (never published) | `application.yml` (`management.server.port`) |
+| `tls` profile: upstream calls over mutual TLS (the `oj` bundle's certificate presented, the service's verified against the CA and the route URI's host); actuator TLS with a client certificate required | `application-tls.yml` |
 | IP/device ban check (Redis mirror written by identity-service); 403 + `oj.request.banned`; fails open | `AccessBanFilter`, `RedisLookups` |
 | Revoked access token (logout blocklist, per-user `revoked-before` cutoff) is stripped, not rejected; fails open | `RevokedTokenFilter`, `RedisLookups` |
 
@@ -26,7 +27,7 @@ property-defined routes, not to the Java DSL routes in `GatewayRoutes`.
 | Port | Purpose |
 |---|---|
 | 8000 | public API |
-| 8081 | actuator: `/actuator/health`, `/actuator/prometheus` |
+| 8081 | actuator: `/actuator/health`, `/actuator/prometheus` (`tls` profile: HTTPS, client certificate required) |
 
 | Env | Default | Meaning |
 |---|---|---|
