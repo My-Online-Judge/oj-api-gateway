@@ -101,7 +101,7 @@ class RedisTlsTest {
             StepVerifier.create(lookup.isBanned("ip", "9.9.9.9")).expectError().verify(Duration.ofSeconds(90));
 
             SimpleMeterRegistry meters = new SimpleMeterRegistry();
-            AccessBanFilter filter = new AccessBanFilter(lookup, new ObjectMapper(), meters);
+            AccessBanFilter filter = new AccessBanFilter(lookup, new ObjectMapper(), meters, false);
             GatewayFilterChain chain = exchange -> Mono.empty();
             filter.filter(MockServerWebExchange.from(MockServerHttpRequest.get("/x").remoteAddress(new java.net.InetSocketAddress("9.9.9.9", 1234)).build()), chain)
                     .block(Duration.ofSeconds(90));

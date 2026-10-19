@@ -5,10 +5,7 @@ import io.netty.handler.ssl.SslHandler;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslManagerBundle;
-import org.springframework.boot.ssl.pem.PemSslStoreBundle;
-import org.springframework.boot.ssl.pem.PemSslStoreDetails;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -22,20 +19,15 @@ import reactor.netty.DisposableServer;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.server.HttpServer;
 
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.Comparator;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -45,8 +37,8 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 /**
  * Under the tls profile the gateway calls the services over mutual TLS: it presents the "oj" bundle's certificate (the
  * services require one) and accepts an upstream only if its certificate chains to the CA and names the host of the
- * route URI. Its actuator port serves TLS and requires a client certificate too. Test-only fixtures:
- * src/test/resources/tls.
+ * route URI. Its actuator port serves TLS and requires a client certificate too. The test calls the API port as the edge
+ * does (GatewayEdgeOnlyTest). Test-only fixtures: src/test/resources/tls.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "management.server.port=0")
 @ActiveProfiles("tls")
@@ -69,17 +61,7 @@ class UpstreamMutualTlsTest {
     @DynamicPropertySource
     static void certificatesAndRoutes(DynamicPropertyRegistry registry) throws IOException {
         // The gateway's own identity, as tls-init installs it: tls.crt/tls.key + ca.crt in OJ_TLS_DIR.
-        tlsDir = Files.createTempDirectory("oj-tls");
-        for (Map.Entry<String, String> f : Map.of("api-gateway.crt", "tls.crt", "api-gateway.key", "tls.key",
-                "ca.crt", "ca.crt").entrySet()) {
-            try (InputStream in = UpstreamMutualTlsTest.class.getResourceAsStream("/tls/" + f.getKey())) {
-                if (in == null) {
-                    throw new IllegalStateException("test fixture missing from the classpath: /tls/" + f.getKey()
-                            + " (regenerate with judge-deployment/pki/pki.sh fixtures)");
-                }
-                Files.copy(in, tlsDir.resolve(f.getValue()));
-            }
-        }
+        tlsDir = TlsFixtures.installAs("api-gateway");
         registry.add("OJ_TLS_DIR", tlsDir::toString);
         registry.add("oj.gateway.submission-uri", () -> "https://localhost:" + SERVICE.port());
         registry.add("oj.gateway.problem-uri", () -> "https://127.0.0.2:" + WRONG_HOST.port());
@@ -89,9 +71,7 @@ class UpstreamMutualTlsTest {
     static void cleanUp() throws IOException {
         SERVICE.stop();
         WRONG_HOST.stop();
-        try (var files = Files.walk(tlsDir)) {
-            files.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-        }
+        TlsFixtures.delete(tlsDir);
     }
 
     @LocalServerPort
@@ -104,8 +84,7 @@ class UpstreamMutualTlsTest {
 
     @BeforeEach
     void setUp() {
-        // The gateway's own API port stays plain HTTP here (its server TLS is the edge's business).
-        client = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + port).build();
+        client = TlsFixtures.webTestClientPresenting("edge", port);
     }
 
     @Test
@@ -129,14 +108,14 @@ class UpstreamMutualTlsTest {
 
     @Test
     void actuatorRequiresAClientCertificate() throws Exception {
-        HttpResponse<String> health = get(clientPresenting("api-gateway"), "/actuator/health");
+        HttpResponse<String> health = get(TlsFixtures.httpClientPresenting("api-gateway"), "/actuator/health");
         assertThat(health.statusCode()).isEqualTo(200);
         assertThat(health.body()).contains("\"UP\"");
 
         // TLS 1.3 reports a missing client certificate after the handshake, on the first read: depending on timing the
         // client sees the alert (SSLHandshakeException), a reset, or only the closed connection. The same port just
         // answered over TLS, so the client certificate is the one difference.
-        Throwable refused = catchThrowable(() -> get(clientPresenting(null), "/actuator/health"));
+        Throwable refused = catchThrowable(() -> get(TlsFixtures.httpClientPresenting(null), "/actuator/health"));
         assertThat(refused).as("no HTTP answer without a client certificate").isInstanceOf(IOException.class);
     }
 
@@ -145,23 +124,6 @@ class UpstreamMutualTlsTest {
                 .timeout(Duration.ofSeconds(10))
                 .build();
         return client.send(request, HttpResponse.BodyHandlers.ofString());
-    }
-
-    /** Trusts the test CA and presents the fixture {@code identity} (nothing when null). */
-    private static HttpClient clientPresenting(String identity) throws Exception {
-        SslManagerBundle managers = managers(identity);
-        SSLContext context = SSLContext.getInstance("TLS");
-        context.init(managers.getKeyManagers(), managers.getTrustManagers(), null);
-        return HttpClient.newBuilder().sslContext(context).version(HttpClient.Version.HTTP_1_1)
-                .connectTimeout(Duration.ofSeconds(5)).build();
-    }
-
-    private static SslManagerBundle managers(String identity) {
-        PemSslStoreDetails keyStore = identity == null ? null
-                : new PemSslStoreDetails(null, "classpath:tls/" + identity + ".crt",
-                        "classpath:tls/" + identity + ".key");
-        return SslBundle.of(new PemSslStoreBundle(keyStore, PemSslStoreDetails.forCertificate("classpath:tls/ca.crt")))
-                .getManagers();
     }
 
     /**
@@ -175,7 +137,7 @@ class UpstreamMutualTlsTest {
         private final AtomicReference<String> clientSubject = new AtomicReference<>();
 
         private MutualTlsUpstream(String host, String leaf) {
-            SslManagerBundle managers = managers(leaf);
+            SslManagerBundle managers = TlsFixtures.managers(leaf);
             Http11SslContextSpec tls = Http11SslContextSpec.forServer(managers.getKeyManagerFactory())
                     .configure(b -> b.trustManager(managers.getTrustManagerFactory()).clientAuth(ClientAuth.REQUIRE));
             this.server = HttpServer.create().host(host).port(0)

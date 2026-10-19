@@ -23,9 +23,31 @@ spring:
           httpclient:
             ssl:
               ssl-bundle: oj
+          # The browsers' origin is the edge (https://${OJ_PUBLIC_HOST}); the current entries are kept.
+          globalcors:
+            cors-configurations:
+              "[/**]":
+                allowed-origins:
+                  - "http://localhost:5173"
+                  - "http://localhost"
+                  - "https://${OJ_PUBLIC_HOST:localhost}"
+# The API port 8000 serves TLS and requires a client certificate signed by the CA; only the edge's (Caddy, CN edge) gets
+# past PeerCertificateWebFilter, so no browser or other container reaches the gateway except through the edge.
+server:
+  ssl:
+    bundle: oj
+    client-auth: need
+oj:
+  tls:
+    allowed-clients: edge
+  gateway:
+    edge:
+      # Behind the edge the socket peer is Caddy: the client is the first X-Forwarded-For hop, which Caddy writes (and
+      # whose client-sent value it discards). Trusted only because port 8000 answers the edge alone (above).
+      trust-forwarded-for: true
 # The actuator port (management.server.port, 8081) serves TLS and requires a CA-signed client certificate (Prometheus
-# and the healthcheck present their own). Management SSL needs that separate port: on the main port, Spring Boot
-# refuses to start. The API port 8000 stays plain HTTP until the edge (sub-project 10, task 14).
+# and the healthcheck present their own; the edge allowlist above does not apply there). Management SSL needs that
+# separate port: on the main port, Spring Boot refuses to start.
 management:
   server:
     ssl:

@@ -24,7 +24,8 @@ spring:
           # strips every X-Forwarded-* header, so the services would see the gateway's IP for every
           # user (one IP ban = everyone banned, one per-IP login limit shared by all). '.*' is safe
           # ONLY because EdgeHeaders first deletes every client-supplied forwarding header:
-          # the X-Forwarded-For a service receives is exactly the socket peer the gateway saw.
+          # the X-Forwarded-For a service receives is exactly the socket peer the gateway saw (behind
+          # the edge, application-tls.yml: the client Caddy names, then Caddy).
           trusted-proxies: ".*"
           httpclient:
             # A stopped upstream's name stops resolving within a second (UpstreamDnsConfig); this bounds an address

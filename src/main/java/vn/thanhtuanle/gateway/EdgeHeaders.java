@@ -1,5 +1,6 @@
 package vn.thanhtuanle.gateway;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.cloud.gateway.filter.headers.HttpHeadersFilter;
@@ -34,10 +35,16 @@ class EdgeHeaders {
      * Strips client-supplied forwarding headers before routing, so the X-Forwarded-For that Spring
      * Cloud Gateway then writes (see trusted-proxies in application.yml) holds exactly the socket
      * peer; and forwards the Host the browser sent, as judge-api saw it before the gateway existed.
+     * Behind the edge ({@link EdgeClientIp#TRUST_FORWARDED_FOR}) X-Forwarded-For is kept: Caddy wrote it
+     * (the browser's address, any client value discarded), so the services see the client first and
+     * the edge after it.
      */
     @Bean
-    GlobalFilter clientForwardingHeadersFilter() {
-        return new ClientForwardingHeadersFilter();
+    GlobalFilter clientForwardingHeadersFilter(
+            @Value("${" + EdgeClientIp.TRUST_FORWARDED_FOR + ":false}") boolean trustForwardedFor) {
+        return new ClientForwardingHeadersFilter(trustForwardedFor
+                ? CLIENT_FORWARDING_HEADERS.stream().filter(h -> !h.equals(EdgeClientIp.X_FORWARDED_FOR)).toList()
+                : CLIENT_FORWARDING_HEADERS);
     }
 
     /**
@@ -68,10 +75,16 @@ class EdgeHeaders {
 
     private static final class ClientForwardingHeadersFilter implements GlobalFilter, Ordered {
 
+        private final List<String> removed;
+
+        ClientForwardingHeadersFilter(List<String> removed) {
+            this.removed = removed;
+        }
+
         @Override
         public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
             ServerHttpRequest request = exchange.getRequest().mutate()
-                    .headers(headers -> CLIENT_FORWARDING_HEADERS.forEach(headers::remove))
+                    .headers(headers -> removed.forEach(headers::remove))
                     .build();
             ServerWebExchange edged = exchange.mutate().request(request).build();
             edged.getAttributes().put(PRESERVE_HOST_HEADER_ATTRIBUTE, true);

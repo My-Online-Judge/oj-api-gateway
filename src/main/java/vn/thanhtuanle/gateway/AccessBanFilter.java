@@ -5,6 +5,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -17,9 +18,10 @@ import reactor.core.publisher.Mono;
 import vn.thanhtuanle.oj.common.client.ClientFingerprint;
 
 /**
- * Refuses requests from a banned IP (the socket peer — EdgeHeaders guarantees no client can spoof
- * it) or a banned device ({@link ClientFingerprint}, the rule the bans were recorded with). Fails
- * open: when the ban store is unreachable the request goes through, as it did in judge-api.
+ * Refuses requests from a banned IP ({@link EdgeClientIp}: the socket peer, or behind the edge the first
+ * X-Forwarded-For hop Caddy wrote — no client can spoof either) or a banned device ({@link ClientFingerprint}, the
+ * rule the bans were recorded with). Fails open: when the ban store is unreachable the request goes through, as it
+ * did in judge-api.
  */
 @Component
 class AccessBanFilter implements GlobalFilter, Ordered {
@@ -32,10 +34,13 @@ class AccessBanFilter implements GlobalFilter, Ordered {
     private final ObjectMapper objectMapper;
     private final Counter banned;
     private final Counter fallbacks;
+    private final boolean trustForwardedFor;
 
-    AccessBanFilter(BanLookup bans, ObjectMapper objectMapper, MeterRegistry registry) {
+    AccessBanFilter(BanLookup bans, ObjectMapper objectMapper, MeterRegistry registry,
+                    @Value("${" + EdgeClientIp.TRUST_FORWARDED_FOR + ":false}") boolean trustForwardedFor) {
         this.bans = bans;
         this.objectMapper = objectMapper;
+        this.trustForwardedFor = trustForwardedFor;
         // Same meter judge-api registered, so the BannedRequestFlood alert keeps working unchanged.
         this.banned = Counter.builder("oj.request.banned")
                 .description("Requests refused because the client IP or device is banned")
@@ -50,7 +55,7 @@ class AccessBanFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
-        String ip = request.getRemoteAddress() == null ? null : request.getRemoteAddress().getHostString();
+        String ip = EdgeClientIp.resolve(exchange, trustForwardedFor);
         String device = ClientFingerprint.deviceHash(
                 request.getHeaders().getFirst("X-Device-Id"), request.getHeaders().getFirst(HttpHeaders.USER_AGENT));
         return bans.isBanned("ip", ip)
