@@ -61,6 +61,7 @@ class UpstreamMutualTlsTest {
      * address no SAN lists: 127.0.0.2 (on Linux all of 127/8 is loopback). The certificate itself is valid and chains
      * to the CA.
      */
+    // Relies on all of 127/8 being loopback (Linux, as CI runs; macOS has only 127.0.0.1 unless aliased).
     static final MutualTlsUpstream WRONG_HOST = MutualTlsUpstream.start("127.0.0.2", "tls-probe");
 
     private static Path tlsDir;
