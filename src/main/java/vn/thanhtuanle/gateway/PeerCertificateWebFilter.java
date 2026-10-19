@@ -3,28 +3,23 @@ package vn.thanhtuanle.gateway;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
-import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.web.context.WebServerApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ConditionContext;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
-import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.SslInfo;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+import vn.thanhtuanle.oj.common.tls.AllowedClients;
 import vn.thanhtuanle.oj.common.tls.OjTlsProperties;
 import vn.thanhtuanle.oj.common.tls.PeerCertificates;
 
 import java.security.cert.X509Certificate;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -83,21 +78,11 @@ class PeerCertificateWebFilter implements WebFilter, Ordered {
     @EnableConfigurationProperties(OjTlsProperties.class)
     static class Registration {
 
+        /** Under client auth (the tls profile) an empty or blank-only allowlist fails the startup (oj-common rule). */
         @Bean
-        @Conditional(AllowedClientsConfigured.class)
+        @Conditional(AllowedClients.Enforced.class)
         PeerCertificateWebFilter peerCertificateWebFilter(OjTlsProperties properties, ObjectMapper objectMapper) {
-            return new PeerCertificateWebFilter(Set.copyOf(properties.allowedClients()), objectMapper);
-        }
-    }
-
-    /** Binds the list, as oj-common does, so comma form, YAML lists and {@code [0]=} indexed properties all count. */
-    static class AllowedClientsConfigured extends SpringBootCondition {
-        @Override
-        public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
-            List<?> clients = Binder.get(context.getEnvironment())
-                    .bind("oj.tls.allowed-clients", List.class).orElse(List.of());
-            return clients.isEmpty() ? ConditionOutcome.noMatch("oj.tls.allowed-clients is empty")
-                    : ConditionOutcome.match("oj.tls.allowed-clients is set");
+            return new PeerCertificateWebFilter(AllowedClients.required(properties), objectMapper);
         }
     }
 }
