@@ -1,6 +1,8 @@
 package vn.thanhtuanle.gateway;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.handler.ssl.SslClosedEngineException;
+import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -50,14 +52,20 @@ class JsonErrorWebExceptionHandler implements ErrorWebExceptionHandler {
         for (Throwable t = ex; t != null; t = t.getCause()) {
             // Connection refused and connect timeout (ConnectTimeoutException extends ConnectException),
             // DNS failure ("Failed to resolve 'submission-service'" when the container is gone), and the upstream
-            // closing the connection before it answered (restarting, or a stale pooled keep-alive).
+            // closing the connection before it answered (restarting, or a stale pooled keep-alive). A TLS 1.3 service
+            // refusing the gateway's client certificate also ends here: it says so after the handshake, on the first
+            // read, so the gateway only sees the connection close.
             if (t instanceof ConnectException || t instanceof UnknownHostException
                     || t instanceof PrematureCloseException) {
                 return HttpStatus.SERVICE_UNAVAILABLE;
             }
-            // TLS between the gateway and the service failed: the service's certificate was refused (not signed by
-            // the CA, or not issued for the host in the route URI) or the service refused the gateway's. A retry does
-            // not help.
+            // A TLS handshake the upstream did not finish in time (slow or overloaded) or an engine closed under the
+            // request (the upstream restarting): a retry can succeed. Checked before SSLException, which both extend.
+            if (t instanceof SslHandshakeTimeoutException || t instanceof SslClosedEngineException) {
+                return HttpStatus.SERVICE_UNAVAILABLE;
+            }
+            // Any other TLS failure: the gateway refused the service's certificate (not signed by the CA, or not issued
+            // for the host in the route URI). A retry does not help.
             if (t instanceof SSLException) {
                 return HttpStatus.BAD_GATEWAY;
             }
