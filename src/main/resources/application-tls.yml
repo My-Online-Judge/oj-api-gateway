@@ -43,7 +43,8 @@ oj:
   gateway:
     edge:
       # Behind the edge the socket peer is Caddy: the client is the first X-Forwarded-For hop, which Caddy writes (and
-      # whose client-sent value it discards). Trusted only because port 8000 answers the edge alone (above).
+      # whose client-sent value it discards). Honoured only on a connection that presented the edge's certificate
+      # (EdgeClientIp): any other caller is its socket peer.
       trust-forwarded-for: true
 # The actuator port (management.server.port, 8081) serves TLS and requires a CA-signed client certificate (Prometheus
 # and the healthcheck present their own; the edge allowlist above does not apply there). Management SSL needs that

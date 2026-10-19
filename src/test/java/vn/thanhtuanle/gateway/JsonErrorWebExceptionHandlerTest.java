@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.netty.http.client.PrematureCloseException;
 
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import java.net.ConnectException;
 
@@ -49,6 +50,16 @@ class JsonErrorWebExceptionHandlerTest {
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(JsonErrorWebExceptionHandler.statusFor(
                 new DecoderException(new SslHandshakeTimeoutException("handshake timed out after 10000ms"))))
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void aRetryableCauseAnywhereInTheChainWinsOverAnOuterSslException() {
+        assertThat(JsonErrorWebExceptionHandler.statusFor(new SSLException("handshake failed",
+                new SslHandshakeTimeoutException("handshake timed out after 10000ms"))))
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(JsonErrorWebExceptionHandler.statusFor(new DecoderException(new SSLException("closed",
+                new ConnectException("Connection reset")))))
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 

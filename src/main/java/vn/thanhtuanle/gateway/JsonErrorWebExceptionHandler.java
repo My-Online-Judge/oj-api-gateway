@@ -17,6 +17,7 @@ import reactor.netty.http.client.PrematureCloseException;
 import javax.net.ssl.SSLException;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
+import java.util.function.Predicate;
 
 /**
  * Renders every error the gateway itself produces in the services' {@code ApiResponse} error shape
@@ -49,28 +50,37 @@ class JsonErrorWebExceptionHandler implements ErrorWebExceptionHandler {
         if (ex instanceof ResponseStatusException rse) {
             return rse.getStatusCode();
         }
-        for (Throwable t = ex; t != null; t = t.getCause()) {
-            // Connection refused and connect timeout (ConnectTimeoutException extends ConnectException),
-            // DNS failure ("Failed to resolve 'submission-service'" when the container is gone), and the upstream
-            // closing the connection before it answered (restarting, or a stale pooled keep-alive). A TLS 1.3 service
-            // refusing the gateway's client certificate also ends here: it says so after the handshake, on the first
-            // read, so the gateway only sees the connection close.
-            if (t instanceof ConnectException || t instanceof UnknownHostException
-                    || t instanceof PrematureCloseException) {
-                return HttpStatus.SERVICE_UNAVAILABLE;
-            }
-            // A TLS handshake the upstream did not finish in time (slow or overloaded) or an engine closed under the
-            // request (the upstream restarting): a retry can succeed. Checked before SSLException, which both extend.
-            if (t instanceof SslHandshakeTimeoutException || t instanceof SslClosedEngineException) {
-                return HttpStatus.SERVICE_UNAVAILABLE;
-            }
-            // Any other TLS failure: the gateway refused the service's certificate (not signed by the CA, or not issued
-            // for the host in the route URI). A retry does not help.
-            if (t instanceof SSLException) {
-                return HttpStatus.BAD_GATEWAY;
-            }
+        // A retryable cause anywhere in the chain wins, even under an outer SSLException.
+        if (anyCause(ex, JsonErrorWebExceptionHandler::retryable)) {
+            return HttpStatus.SERVICE_UNAVAILABLE;
+        }
+        // Any other TLS failure: the gateway refused the service's certificate (not signed by the CA, or not issued for
+        // the host in the route URI). A retry does not help.
+        if (anyCause(ex, t -> t instanceof SSLException)) {
+            return HttpStatus.BAD_GATEWAY;
         }
         return HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+
+    /**
+     * Connection refused and connect timeout (ConnectTimeoutException extends ConnectException), DNS failure ("Failed to
+     * resolve 'submission-service'" when the container is gone), the upstream closing the connection before it answered
+     * (restarting, or a stale pooled keep-alive), a TLS handshake it did not finish in time (slow or overloaded) and an
+     * engine closed under the request (restarting): a retry can succeed. A TLS 1.3 service refusing the gateway's client
+     * certificate can end here too: it says so after the handshake, on the first read, which may look like a close.
+     */
+    private static boolean retryable(Throwable t) {
+        return t instanceof ConnectException || t instanceof UnknownHostException || t instanceof PrematureCloseException
+                || t instanceof SslHandshakeTimeoutException || t instanceof SslClosedEngineException;
+    }
+
+    private static boolean anyCause(Throwable ex, Predicate<Throwable> test) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            if (test.test(t)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String messageFor(HttpStatusCode status) {

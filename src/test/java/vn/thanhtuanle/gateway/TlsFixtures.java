@@ -14,6 +14,9 @@ import java.io.InputStream;
 import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.Map;
@@ -49,6 +52,16 @@ final class TlsFixtures {
         }
     }
 
+    /** The fixture {@code identity}'s certificate. */
+    static X509Certificate certificate(String identity) throws IOException, CertificateException {
+        try (InputStream in = TlsFixtures.class.getResourceAsStream("/tls/" + identity + ".crt")) {
+            if (in == null) {
+                throw new IllegalStateException("test fixture missing from the classpath: /tls/" + identity + ".crt");
+            }
+            return (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(in);
+        }
+    }
+
     /** Trusts the test CA; presents the fixture {@code identity} (nothing when null). */
     static SslManagerBundle managers(String identity) {
         PemSslStoreDetails keyStore = identity == null ? null
@@ -66,7 +79,10 @@ final class TlsFixtures {
                 .connectTimeout(Duration.ofSeconds(5)).build();
     }
 
-    /** {@code https://localhost:<port>}, verified against the test CA, presenting {@code identity}. */
+    /**
+     * {@code https://127.0.0.1:<port>} (not localhost, which may resolve to ::1: the socket peer stays predictable; every
+     * fixture SAN lists 127.0.0.1), verified against the test CA, presenting {@code identity}.
+     */
     static WebTestClient webTestClientPresenting(String identity, int port) {
         SslManagerBundle managers = managers(identity);
         Http11SslContextSpec tls = Http11SslContextSpec.forClient().configure(b -> b
@@ -75,7 +91,7 @@ final class TlsFixtures {
         reactor.netty.http.client.HttpClient http = reactor.netty.http.client.HttpClient.create()
                 .secure(spec -> spec.sslContext(tls));
         return WebTestClient.bindToServer(new ReactorClientHttpConnector(http))
-                .baseUrl("https://localhost:" + port)
+                .baseUrl("https://127.0.0.1:" + port)
                 .responseTimeout(Duration.ofSeconds(10))
                 .build();
     }

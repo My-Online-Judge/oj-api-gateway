@@ -79,6 +79,14 @@ class GatewayEdgeOnlyTest {
     }
 
     @Test
+    void theActuatorExemptionIsTheActuatorPortNotThePath() {
+        // On the API port /actuator/** is just another path: tls-probe is refused before anything else looks at it.
+        TlsFixtures.webTestClientPresenting("tls-probe", port).get().uri("/actuator/health").exchange()
+                .expectStatus().isForbidden()
+                .expectBody().jsonPath("$.message").isEqualTo("Client certificate not allowed");
+    }
+
+    @Test
     void withoutAClientCertificateThereIsNoHttpAnswer() {
         // TLS 1.3 refuses after the handshake, on the first read: an alert, a reset or just the closed connection.
         Throwable refused = catchThrowable(() -> get(TlsFixtures.httpClientPresenting(null), port, "/api/v1/languages"));

@@ -10,7 +10,7 @@ judge-deployment), which proxies to the gateway over mutual TLS, and the gateway
 | Concern | Where |
 |---|---|
 | Routing table: identity, problem and submission paths to their services; any other path is a 404 from the gateway | `GatewayRoutes` |
-| Client-IP trust boundary: client `X-Forwarded-*`/`X-Real-IP`/`Forwarded` are deleted, then `X-Forwarded-For` = socket peer. Behind the edge (`oj.gateway.edge.trust-forwarded-for`, `tls` profile) Caddy's `X-Forwarded-For` is kept and its first hop is the client IP | `EdgeHeaders`, `EdgeClientIp`, `trusted-proxies` in `application.yml` |
+| Client-IP trust boundary: client `X-Forwarded-*`/`X-Real-IP`/`Forwarded` are deleted, then `X-Forwarded-For` = socket peer. Behind the edge (`oj.gateway.edge.trust-forwarded-for`, `tls` profile) Caddy's `X-Forwarded-For` is kept and its first hop is the client IP, on connections that present the edge's certificate only | `EdgeHeaders`, `EdgeClientIp`, `trusted-proxies` in `application.yml` |
 | Browser `Host` is forwarded unchanged | `EdgeHeaders` |
 | CORS for the portal origins; upstream `Access-Control-*` headers are dropped | `application.yml` (`globalcors`), `EdgeHeaders` |
 | Gateway errors in the services' `ApiResponse` shape (oj-common) (503 when an upstream is down, restarting or too slow to finish the TLS handshake; 502 when the gateway refuses its certificate) | `JsonErrorWebExceptionHandler` |

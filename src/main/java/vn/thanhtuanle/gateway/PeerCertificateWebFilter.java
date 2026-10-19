@@ -60,7 +60,7 @@ class PeerCertificateWebFilter implements WebFilter, Ordered {
         if (WebServerApplicationContext.hasServerNamespace(exchange.getApplicationContext(), MANAGEMENT_NAMESPACE)) {
             return chain.filter(exchange);
         }
-        Optional<String> cn = commonName(exchange.getRequest().getSslInfo());
+        Optional<String> cn = peerCommonName(exchange.getRequest().getSslInfo());
         if (cn.isPresent() && allowed.contains(cn.get())) {
             return chain.filter(exchange);
         }
@@ -68,7 +68,8 @@ class PeerCertificateWebFilter implements WebFilter, Ordered {
         return ApiErrors.write(exchange.getResponse(), HttpStatus.FORBIDDEN, NOT_ALLOWED_MESSAGE, objectMapper);
     }
 
-    private static Optional<String> commonName(SslInfo ssl) {
+    /** The CN of the client certificate this connection presented; empty without TLS or a certificate. */
+    static Optional<String> peerCommonName(SslInfo ssl) {
         X509Certificate[] peers = ssl == null ? null : ssl.getPeerCertificates();
         return peers == null || peers.length == 0 ? Optional.empty() : PeerCertificates.commonName(peers[0]);
     }
