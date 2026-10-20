@@ -26,4 +26,7 @@ RUN mkdir /otel \
     && echo "${OTEL_AGENT_SHA256}  /otel/opentelemetry-javaagent.jar" | sha256sum -c -
 COPY --from=builder /app/target/api-gateway.jar app.jar
 EXPOSE 8000 8081
+# Non-root (sp12): the app and /otel are root-owned and world-readable; it writes only /tmp.
+RUN addgroup -S -g 10001 oj && adduser -S -D -H -u 10001 -G oj oj
+USER 10001:10001
 ENTRYPOINT ["java", "-jar", "app.jar"]
