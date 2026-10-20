@@ -32,7 +32,7 @@ class RoutingTest extends GatewayTestSupport {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/api/v1/auth/me", "/api/v1/auth/login", "/api/v1/users", "/api/v1/users/42/roles",
+    @ValueSource(strings = {"/api/v1/auth/me", "/api/v1/auth/login", "/api/v1/users", "/api/v1/users/42/roles", "/api/v1/users/42/statsx",
             "/api/v1/roles", "/api/v1/permissions", "/api/v1/security/bans?page=0"})
     void identityPathsGoToIdentityService(String path) {
         client.get().uri(path).exchange()
@@ -51,6 +51,39 @@ class RoutingTest extends GatewayTestSupport {
                 .expectBody(String.class).isEqualTo("upstream:" + path);
         assertThat(UPSTREAM.received()).as("submission-service sees none of them").isEmpty();
         assertThat(PROBLEM.received()).hasSize(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/contests", "/api/v1/contests/spring-cup", "/api/v1/contests/spring-cup/scoreboard",
+            "/api/v1/contests/spring-cup/problems/A"})
+    void contestPathsGoToProblemService(String path) {
+        client.get().uri(path).exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("upstream:" + path);
+        assertThat(PROBLEM.received()).hasSize(1);
+        assertThat(UPSTREAM.received()).as("submission-service sees none of them").isEmpty();
+        assertThat(IDENTITY.received()).as("identity-service sees none of them").isEmpty();
+    }
+
+    @Test
+    void userStatsGoToSubmissionService() {
+        String path = "/api/v1/users/00000000-0000-0000-0000-000000000001/stats";
+        client.get().uri(path).exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("upstream:" + path);
+        assertThat(UPSTREAM.received()).hasSize(1);
+        assertThat(IDENTITY.received()).as("identity-service sees none of it").isEmpty();
+        assertThat(PROBLEM.received()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/users/public/alice", "/api/v1/users/public?ids=a"})
+    void publicProfilesGoToIdentityService(String path) {
+        client.get().uri(path).exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("upstream:" + path);
+        assertThat(UPSTREAM.received()).isEmpty();
+        assertThat(PROBLEM.received()).isEmpty();
     }
 
     @Test
@@ -77,7 +110,7 @@ class RoutingTest extends GatewayTestSupport {
 
     // Since sub-project 3a no service owns "the rest": an unclaimed API path is the gateway's own 404.
     @ParameterizedTest
-    @ValueSource(strings = {"/api/v1/foo", "/api/v1/usersx", "/api/v1/problemsx", "/api/v1/submissionsx"})
+    @ValueSource(strings = {"/api/v1/foo", "/api/v1/usersx", "/api/v1/problemsx", "/api/v1/submissionsx", "/api/v1/contestsx"})
     void unclaimedApiPathsAreA404FromTheGateway(String path) {
         client.get().uri(path).exchange()
                 .expectStatus().isNotFound()

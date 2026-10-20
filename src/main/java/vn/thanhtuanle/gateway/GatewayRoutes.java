@@ -23,12 +23,17 @@ class GatewayRoutes {
     static final String[] SUBMISSION_PROBLEM_PATHS = {"/api/v1/problems/{slug}/rejudge"};
 
     /** Owned by problem-service since sub-project 2b. */
-    static final String[] PROBLEM_PATHS = {"/api/v1/problems", "/api/v1/problems/**"};
+    static final String[] PROBLEM_PATHS = {
+            "/api/v1/problems", "/api/v1/problems/**", "/api/v1/contests", "/api/v1/contests/**"};
+
+    /** A user-scoped read owned by submission-service; routed ahead of identity's {@code /api/v1/users/**}. */
+    static final String USER_STATS_PATH = "/api/v1/users/*/stats";
 
     @Bean
     RouteLocator ojRoutes(RouteLocatorBuilder builder, GatewayRouteProperties props) {
         RouteLocatorBuilder.Builder routes = builder.routes()
                 .route("submission-rejudge", r -> r.order(-1).path(SUBMISSION_PROBLEM_PATHS).uri(props.submissionUri()))
+                .route("user-stats", r -> r.order(-1).path(USER_STATS_PATH).uri(props.submissionUri()))
                 .route("identity-api", r -> r.order(0).path(IDENTITY_PATHS).uri(props.identityUri()))
                 .route("problem-api", r -> r.order(0).path(PROBLEM_PATHS).uri(props.problemUri()))
                 .route("submission-api", r -> r.order(0).path(SUBMISSION_PATHS).uri(props.submissionUri()));
