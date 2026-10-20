@@ -62,6 +62,10 @@ management:
     # Actuator lives on its own port, which compose does not publish, so /actuator is never
     # reachable through the public :8000.
     port: 8081
+  metrics:
+    distribution:
+      percentiles-histogram:
+        "[http.server.requests]": true
   endpoints:
     web:
       exposure:
