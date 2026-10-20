@@ -33,6 +33,7 @@ class RoutingTest extends GatewayTestSupport {
 
     @ParameterizedTest
     @ValueSource(strings = {"/api/v1/auth/me", "/api/v1/auth/login", "/api/v1/users", "/api/v1/users/42/roles", "/api/v1/users/42/statsx",
+            "/api/v1/users/public/stats", "/api/v1/users/00000000-0000-0000-0000-000000000001/statsx",
             "/api/v1/roles", "/api/v1/permissions", "/api/v1/security/bans?page=0"})
     void identityPathsGoToIdentityService(String path) {
         client.get().uri(path).exchange()

@@ -26,8 +26,8 @@ class GatewayRoutes {
     static final String[] PROBLEM_PATHS = {
             "/api/v1/problems", "/api/v1/problems/**", "/api/v1/contests", "/api/v1/contests/**"};
 
-    /** A user-scoped read owned by submission-service; routed ahead of identity's {@code /api/v1/users/**}. */
-    static final String USER_STATS_PATH = "/api/v1/users/*/stats";
+    /** A user-scoped read owned by submission-service; routed ahead of identity's {@code /api/v1/users/**}; matches a UUID user id only, so {@code /users/public/stats} stays identity's. */
+    static final String USER_STATS_PATH = "/api/v1/users/{userId:[0-9a-fA-F-]{36}}/stats";
 
     @Bean
     RouteLocator ojRoutes(RouteLocatorBuilder builder, GatewayRouteProperties props) {
