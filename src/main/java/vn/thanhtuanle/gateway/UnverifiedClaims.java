@@ -13,9 +13,16 @@ import java.util.UUID;
  * because the gateway only uses them to take access away: a forged token that gets past this is
  * still rejected by the service's signature check, and a genuine revoked token's claims are real.
  *
- * @param issuedAt {@code iat} in epoch seconds, 0 when absent
+ * @param issuedAt       {@code iat} in epoch seconds, 0 when absent
+ * @param issuedAtMillis {@code iat_ms} in epoch milliseconds, 0 when absent (a token minted before the
+ *                       claim existed, which keeps the whole-second revocation rule)
  */
-public record UnverifiedClaims(String jti, UUID userId, long issuedAt) {
+public record UnverifiedClaims(String jti, UUID userId, long issuedAt, long issuedAtMillis) {
+
+    /** A token without {@code iat_ms}. */
+    public UnverifiedClaims(String jti, UUID userId, long issuedAt) {
+        this(jti, userId, issuedAt, 0);
+    }
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -28,7 +35,8 @@ public record UnverifiedClaims(String jti, UUID userId, long issuedAt) {
         try {
             JsonNode payload = JSON.readTree(Base64.getUrlDecoder().decode(parts[1]));
             return Optional.of(new UnverifiedClaims(
-                    text(payload, "jti"), uuid(text(payload, "uid")), payload.path("iat").asLong(0)));
+                    text(payload, "jti"), uuid(text(payload, "uid")),
+                    payload.path("iat").asLong(0), payload.path("iat_ms").asLong(0)));
         } catch (IllegalArgumentException | IOException e) {
             return Optional.empty();
         }

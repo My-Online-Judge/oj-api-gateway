@@ -27,6 +27,24 @@ class UnverifiedClaimsTest {
     }
 
     @Test
+    void readsIatMillis() {
+        UnverifiedClaims claims = UnverifiedClaims.parse(
+                jwt("{\"jti\":\"j1\",\"uid\":\"11111111-2222-3333-4444-555555555555\",\"iat\":1700000000,\"iat_ms\":1700000000123}"))
+                .orElseThrow();
+
+        assertThat(claims.issuedAt()).isEqualTo(1700000000L);
+        assertThat(claims.issuedAtMillis()).isEqualTo(1700000000123L);
+    }
+
+    @Test
+    void aTokenWithoutIatMillisReadsZero() {
+        UnverifiedClaims claims = UnverifiedClaims.parse(jwt("{\"jti\":\"j1\",\"iat\":1700000000}")).orElseThrow();
+
+        assertThat(claims.issuedAtMillis()).isZero();
+        assertThat(new UnverifiedClaims("j1", null, 5).issuedAtMillis()).isZero();
+    }
+
+    @Test
     void anOldFormatTokenHasNoUserId() {
         UnverifiedClaims claims = UnverifiedClaims.parse(jwt("{\"jti\":\"j1\",\"iat\":1}")).orElseThrow();
 

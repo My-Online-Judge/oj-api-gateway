@@ -49,6 +49,20 @@ class RedisLookupsTest {
         return lookups.revocationLookup(redis).isRevoked(new UnverifiedClaims(jti, ALICE, issuedAt)).block();
     }
 
+    private boolean revoked(long issuedAt, long issuedAtMillis) {
+        return lookups.revocationLookup(redis)
+                .isRevoked(new UnverifiedClaims("j", ALICE, issuedAt, issuedAtMillis)).block();
+    }
+
+    private void cutoffs(String millis, String seconds) {
+        if (millis != null) {
+            redis.opsForValue().set(RedisKeys.tokenRevokedBeforeMillis(ALICE), millis).block();
+        }
+        if (seconds != null) {
+            redis.opsForValue().set(RedisKeys.tokenRevokedBefore(ALICE), seconds).block();
+        }
+    }
+
     @Test
     void aMirroredBanIsFound() {
         redis.opsForValue().set(RedisKeys.accessBan("DEVICE", "d1"), "1").block();
@@ -72,6 +86,34 @@ class RedisLookupsTest {
 
         assertThat(revoked("j", 999)).as("issued before the cutoff").isTrue();
         assertThat(revoked("j", 1000)).as("re-issued by the refresh right after it").isFalse();
+    }
+
+    @Test
+    void aTokenMintedLaterInTheCutoffSecondIsKept() {
+        cutoffs("1000501", "1001");
+
+        assertThat(revoked(1000, 1000600)).isFalse();
+    }
+
+    @Test
+    void aTokenMintedEarlierInTheCutoffSecondIsRevoked() {
+        cutoffs("1000501", "1001");
+
+        assertThat(revoked(1000, 1000400)).isTrue();
+    }
+
+    @Test
+    void aLegacyTokenFallsBackToWholeSeconds() {
+        cutoffs("1000501", "1001");
+
+        assertThat(revoked(1000, 0)).isTrue();
+    }
+
+    @Test
+    void aCutoffWrittenByTheOldIdentityStillRevokes() {
+        cutoffs(null, "1001");
+
+        assertThat(revoked(1000, 1000900)).isTrue();
     }
 
     @Test

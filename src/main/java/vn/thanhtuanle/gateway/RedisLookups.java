@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import reactor.core.publisher.Mono;
 import vn.thanhtuanle.oj.common.redis.RedisKeys;
+import vn.thanhtuanle.oj.common.security.RevocationCutoffs;
+
+import java.util.List;
 
 /** Ban and revocation lookups against the Redis keys identity-service writes (formats from oj-common). */
 @Configuration(proxyBeanMethods = false)
@@ -25,8 +28,11 @@ class RedisLookups {
                     : redis.hasKey(RedisKeys.tokenBlocklist(claims.jti()));
             Mono<Boolean> issuedBeforeCutoff = claims.userId() == null
                     ? Mono.just(false)
-                    : redis.opsForValue().get(RedisKeys.tokenRevokedBefore(claims.userId()))
-                            .map(cutoff -> claims.issuedAt() < Long.parseLong(cutoff))
+                    : redis.opsForValue()
+                            .multiGet(List.of(RedisKeys.tokenRevokedBeforeMillis(claims.userId()),
+                                    RedisKeys.tokenRevokedBefore(claims.userId())))
+                            .map(cutoffs -> RevocationCutoffs.revoked(
+                                    claims.issuedAt(), claims.issuedAtMillis(), cutoffs.get(1), cutoffs.get(0)))
                             .defaultIfEmpty(false);
             return loggedOut.flatMap(revoked -> revoked ? Mono.just(true) : issuedBeforeCutoff);
         };
